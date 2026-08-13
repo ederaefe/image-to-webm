@@ -2,6 +2,21 @@ export const config = {
   runtime: "edge"
 };
 
+function extractVideoUri(payload) {
+  const candidates = [
+    payload?.response?.videoUri,
+    payload?.response?.video?.uri,
+    payload?.response?.videos?.[0]?.video?.uri,
+    payload?.response?.generatedVideos?.[0]?.video?.uri,
+    payload?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri,
+    payload?.videos?.[0]?.uri,
+    payload?.videoUri,
+    payload?.output?.videoUri
+  ];
+
+  return candidates.find(Boolean) || null;
+}
+
 export default async function handler(req) {
   const apiKey = process.env.GEMINI_API;
   const { searchParams } = new URL(req.url);
@@ -14,13 +29,18 @@ export default async function handler(req) {
   try {
     // 1. Validate operation and get the secure URL internally
     const opRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/${operationId}?key=${apiKey}`);
-    const opData = await opRes.json();
+    const opText = await opRes.text();
+    const opData = opText ? JSON.parse(opText) : {};
 
-    if (!opRes.ok || !opData.done) {
+    if (!opRes.ok) {
+      return new Response("Operation fetch failed", { status: opRes.status });
+    }
+
+    if (!opData.done || opData.error) {
       return new Response("Video not ready or operation failed", { status: 404 });
     }
 
-    const googleVideoUri = opData?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
+    const googleVideoUri = extractVideoUri(opData);
 
     if (!googleVideoUri) {
       return new Response("Video URI not found", { status: 500 });
