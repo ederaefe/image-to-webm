@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deradave | Seamless Video & GIF Studio</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --border: #334155;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 24px; }
+    @media (min-width: 900px) { .container { grid-template-columns: 350px 1fr; } }
+    .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    h1, h2, h3 { margin-bottom: 16px; font-weight: 600; }
+    label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: var(--text-muted); }
+    input, textarea { width: 100%; padding: 10px; margin-bottom: 16px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: var(--radius); font-family: inherit; }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+    button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-bottom: 10px; }
+    button:hover:not(:disabled) { background: var(--primary-hover); }
+    button:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+    button.secondary { background: #475569; }
+    button.secondary:hover:not(:disabled) { background: #334155; }
+    button.success { background: var(--success); }
+    .media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .media-card { background: var(--bg-color); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; }
+    .media-preview { width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius); background: #000; margin-bottom: 12px; display: none; }
+    .log-box { background: #000; color: #0f0; font-family: "Courier New", Courier, monospace; font-size: 0.85rem; padding: 12px; border-radius: var(--radius); height: 150px; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); }
+    .progress-container { width: 100%; height: 8px; background: var(--border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; display: none; }
+    .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s ease; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- LEFT PANEL -->
+    <div class="panel">
+      <h2>Veo Studio Control</h2>
+      
+      <label for="imageUpload">Upload Model/Clothing Image (JPEG/PNG/WEBP)</label>
+      <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/webp" />
+
+      <label for="promptInput">Video Generation Prompt</label>
+      <textarea id="promptInput" rows="4">A 5-second seamless looping cinematic shot of this fashion model. Static camera, locked composition. The final frame seamlessly matches the precise lighting, pose, and state of the first frame.</textarea>
+
+      <!-- Step 1: Generate Video -->
+      <button id="btnGenerate" onclick="startGeneration()">1. Generate AI Video</button>
+      
+      <div id="videoProgressContainer" class="progress-container">
+        <div id="videoProgressBar" class="progress-bar"></div>
+      </div>
+
+      <!-- Step 2: Convert to GIF -->
+      <button id="btnConvert" onclick="convertVideoToGif()" class="secondary" disabled>2. Convert Video to Seamless GIF</button>
+      
+      <div id="gifProgressContainer" class="progress-container">
+        <div id="gifProgressBar" class="progress-bar" style="background: var(--success);"></div>
+      </div>
+
+      <h3>Thinking Process (Logs)</h3>
+      <div id="logTerminal" class="log-box">System initialized. Ready for inputs...</div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+      <h2>Media Workspace</h2>
+      <div class="media-grid">
+        <!-- Image Card -->
+        <div class="media-card">
+          <h3>1. Source Image</h3>
+          <img id="imgPreview" class="media-preview" alt="Source Image Preview" />
+          <button id="btnDownloadImage" class="secondary" style="display:none;" onclick="downloadMedia('imgPreview', 'source_image.jpg')">Download Image</button>
+        </div>
+
+        <!-- Video Card -->
+        <div class="media-card">
+          <h3>2. Generated Video</h3>
+          <video id="videoPreview" class="media-preview" controls loop muted playsinline crossorigin="anonymous"></video>
+          <button id="btnDownloadVideo" class="secondary" style="display:none;" onclick="downloadMedia('videoPreview', 'generated_video.mp4')">Download MP4</button>
+        </div>
+
+        <!-- GIF Card -->
+        <div class="media-card">
+          <h3>3. Seamless GIF</h3>
+          <img id="gifPreview" class="media-preview" alt="Final GIF Preview" />
+          <button id="btnDownloadGif" class="success" style="display:none;" onclick="downloadMedia('gifPreview', 'seamless_model.gif')">Download GIF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentImageBase64 = null;
+    let currentMimeType = null;
+    let currentVideoBlob = null;
+    let currentGifBlobUrl = null;
+    let ffmpegInstance = null;
+
+    function logMsg(msg) {
+      const terminal = document.getElementById('logTerminal');
+      const timestamp = new Date().toLocaleTimeString();
+      terminal.innerHTML += `<div>[${timestamp}] ${msg}</div>`;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    document.getElementById('imageUpload').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      currentMimeType = file.type;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        currentImageBase64 = event.target.result; 
+        const imgEl = document.getElementById('imgPreview');
+        imgEl.src = currentImageBase64;
+        imgEl.style.display = 'block';
+        document.getElementById('btnDownloadImage').style.display = 'block';
+        logMsg("Source image loaded and processed.");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function downloadMedia(elementId, filename) {
+      const el = document.getElementById(elementId);
+      const a = document.createElement('a');
+      a.href = el.src;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      logMsg(`Downloaded ${filename}`);
+    }
+
+    // Step 1: Start Generation via Vercel Backend
+    async function startGeneration() {
+      const prompt = document.getElementById('promptInput').value.trim();
+      const btn = document.getElementById('btnGenerate');
+      const progContainer = document.getElementById('videoProgressContainer');
+      const progBar = document.getElementById('videoProgressBar');
+
+      if (!prompt || !currentImageBase64) {
+        alert("Please provide an Image and a Prompt.");
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        progBar.style.background = 'var(--primary)';
+        progContainer.style.display = 'block';
+        progBar.style.width = '10%';
+        logMsg("Transmitting data to secure backend proxy...");
+
+        const response = await fetch('/api/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: currentImageBase64,
+            mimeType: currentMimeType,
+            prompt: prompt
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        logMsg(`Operation accepted. ID: ${data.operationId}. Starting poll loop...`);
+        progBar.style.width = '30%';
+        
+        pollStatus(data.operationId, progBar, btn, progContainer);
+
+      } catch (error) {
+        logMsg(`ERROR: ${error.message}`);
+        progBar.style.background = 'var(--danger)';
+        btn.disabled = false;
+      }
+    }
+
+    // Step 2: Exponential Backoff Polling
+    async function pollStatus(operationId, progBar, btn, progContainer) {
+      let attempts = 0;
+      let delay = 2000;
+      const maxDelay = 15000;
+      const maxAttempts = 30;
+
+      async function check() {
+        attempts++;
+        if (attempts > maxAttempts) {
+          logMsg("ERROR: Video generation timed out.");
+          progBar.style.background = 'var(--danger)';
+          btn.disabled = false;
+          return;
+        }
+
+        try {
+          logMsg(`Polling status (Attempt ${attempts})...`);
+          const response = await fetch(`/api/poll?operationId=${encodeURIComponent(operationId)}`);
+          const data = await response.json();
+
+          if (!response.ok) throw new Error(data.error);
+
+          if (data.status === "complete") {
+            progBar.style.width = '100%';
+            logMsg("Generation complete. Downloading video from edge proxy...");
+            
+            // Fetch video through our secure proxy
+            const mp4Res = await fetch(data.videoUrl);
+            if (!mp4Res.ok) throw new Error("Failed to download video stream.");
+            
+            currentVideoBlob = await mp4Res.blob();
+            const localVideoUrl = URL.createObjectURL(currentVideoBlob);
+            
+            const vidEl = document.getElementById('videoPreview');
+            vidEl.src = localVideoUrl;
+            vidEl.style.display = 'block';
+            
+            document.getElementById('btnDownloadVideo').style.display = 'block';
+            document.getElementById('btnConvert').disabled = false;
+            btn.disabled = false;
+            
+            setTimeout(() => progContainer.style.display = 'none', 2000);
+            return;
+          }
+
+          progBar.style.width = `${Math.min(90, 30 + (attempts * 2))}%`;
+          delay = Math.min(delay * 1.5, maxDelay);
+          setTimeout(check, delay);
+
+        } catch (error) {
+          logMsg(`ERROR: ${error.message}`);
+          progBar.style.background = 'var(--danger)';
+          btn.disabled = false;
+        }
+      }
+      check();
+    }
+
+    // Step 3: FFmpeg WASM Conversion (Kept exactly as you designed)
+    async function convertVideoToGif() {
+      if (!currentVideoBlob) return;
+
+      const btn = document.getElementById('btnConvert');
+      const progContainer = document.getElementById('gifProgressContainer');
+      const progBar = document.getElementById('gifProgressBar');
+      const gifEl = document.getElementById('gifPreview');
+
+      try {
+        btn.disabled = true;
+        progBar.style.background = 'var(--success)';
+        progContainer.style.display = 'block';
+        progBar.style.width = '10%';
+        logMsg("Loading FFmpeg WebAssembly engine...");
+
+        const ffmpegLibrary = window.FFmpegWASM || window.FFmpeg;
+        const { FFmpeg } = ffmpegLibrary;
+        const { fetchFile, toBlobURL } = FFmpegUtil;
+
+        if (!ffmpegInstance) {
+          ffmpegInstance = new FFmpeg();
+          ffmpegInstance.on('progress', ({ ratio }) => {
+            progBar.style.width = `${Math.max(10, Math.round(ratio * 100))}%`;
+          });
+
+          await ffmpegInstance.load({
+            coreURL: await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js', 'text/javascript'),
+            wasmURL: await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm', 'application/wasm')
+          });
+        }
+
+        logMsg("Writing video to virtual file system...");
+        await ffmpegInstance.writeFile('input.mp4', await fetchFile(currentVideoBlob));
+
+        logMsg("Transcoding MP4 to optimized looping GIF...");
+        await ffmpegInstance.exec([
+          '-i', 'input.mp4',
+          '-vf', 'fps=15,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+          '-loop', '0',
+          'output.gif'
+        ]);
+
+        logMsg("Reading output file from virtual file system...");
+        const data = await ffmpegInstance.readFile('output.gif');
+        const gifBlob = new Blob([data.buffer], { type: 'image/gif' });
+        currentGifBlobUrl = URL.createObjectURL(gifBlob);
+
+        gifEl.src = currentGifBlobUrl;
+        gifEl.style.display = 'block';
+        document.getElementById('btnDownloadGif').style.display = 'block';
+        logMsg("GIF conversion successful!");
+
+      } catch (error) {
+        logMsg(`GIF ERROR: ${error.message}`);
+        progBar.style.background = 'var(--danger)';
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          progContainer.style.display = 'none';
+          progBar.style.width = '0%';
+        }, 2000);
+      }
+    }
+  </script>
+</body>
+</html>
