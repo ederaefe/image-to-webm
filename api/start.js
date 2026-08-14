@@ -12,24 +12,21 @@ export default async function handler(req, res) {
         const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
         const payload = {
-            instances: [
-                {
-                    prompt: prompt || "A 6-second seamless looping cinematic product showcase.",
-                    image: {
-                        bytesBase64Encoded: cleanBase64,
-                        mimeType: mimeType
-                    }
+            prompt: prompt || "A 6-second seamless looping cinematic product showcase.",
+            image: {
+                inlineData: {
+                    data: cleanBase64,
+                    mimeType: mimeType
                 }
-            ],
-            parameters: {
-                sampleCount: 1,
-                durationSeconds: parseInt(durationSeconds) || 6,
-                aspectRatio: aspectRatio || "1:1"
+            },
+            config: {
+                duration_seconds: parseInt(durationSeconds) || 6,
+                aspect_ratio: aspectRatio || "1:1"
             }
         };
 
         const attemptGeneration = async () => {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning?key=${apiKey}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:generateVideos?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -50,10 +47,29 @@ export default async function handler(req, res) {
         }
 
         if (!result.ok) {
-            // Return raw Google API error message back to user as requested
-            return res.status(result.status).json({ 
-                error: result.data.error?.message || `Google API Error ${result.status}` 
-            });
+            let errorMsg = result.data.error?.message || `Google API Error ${result.status}`;
+            
+            // Detailed model diagnostics for 404s
+            if (result.status === 404) {
+                try {
+                    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                    const listData = await listRes.json();
+                    if (listData.models) {
+                        const veoModels = listData.models
+                            .map(m => m.name.replace('models/', ''))
+                            .filter(name => name.includes('veo'));
+                        if (veoModels.length > 0) {
+                            errorMsg += `. Your API key has access to these Veo models: [${veoModels.join(', ')}]. Please check model configuration.`;
+                        } else {
+                            errorMsg += `. Your API key does not have access to any Veo models in your region. Make sure billing is enabled in Google AI Studio.`;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Diagnostics check failed:", e);
+                }
+            }
+
+            return res.status(result.status).json({ error: errorMsg });
         }
 
         // result.data.name contains the operation name (e.g. 'operations/12345')
