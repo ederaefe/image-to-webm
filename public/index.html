@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seamless WebM Studio | Native Generation</title>
+  <meta name="description" content="Generate native, seamlessly looping WebM product showcases using Google Gemini Veo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #09090b;
+      --bg-panel: rgba(24, 24, 27, 0.7);
+      --border-color: rgba(63, 63, 70, 0.6);
+      --text-main: #f8fafc;
+      --text-muted: #a1a1aa;
+      --accent: #8b5cf6;
+      --accent-hover: #7c3aed;
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 12px;
+      --glass-blur: blur(16px);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Outfit', sans-serif; 
+      background: radial-gradient(circle at top right, #1e1b4b, var(--bg-base) 40%);
+      color: var(--text-main); 
+      line-height: 1.6; 
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #a78bfa, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    
+    p.subtitle {
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      font-weight: 300;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1300px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    
+    @media (min-width: 1024px) {
+      .container { grid-template-columns: 400px 1fr; }
+    }
+
+    .glass-panel {
+      background: var(--bg-panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    
+    .glass-panel:hover {
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 24px; letter-spacing: 0.5px; }
+
+    .input-group { margin-bottom: 20px; }
+    
+    label { 
+      display: block; 
+      margin-bottom: 8px; 
+      font-size: 0.9rem; 
+      color: var(--text-muted); 
+      font-weight: 400;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.2);
+      border: 1px dashed var(--border-color);
+      color: var(--text-main);
+      border-radius: var(--radius);
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    
+    input[type="file"]:hover { border-color: var(--accent); }
+
+    textarea {
+      width: 100%;
+      padding: 14px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: var(--radius);
+      font-family: inherit;
+      resize: vertical;
+      transition: all 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: var(--radius);
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+    
+    select option {
+      background: var(--bg-base);
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    button::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.4s, height 0.4s;
+    }
+    
+    button:active::after { width: 300px; height: 300px; }
+    button:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 15px rgba(139,92,246,0.3); }
+    button:disabled { background: var(--border-color); color: rgba(255,255,255,0.4); cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    button.secondary { background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); }
+    button.secondary:hover:not(:disabled) { background: rgba(255,255,255,0.15); border-color: var(--text-muted); }
+    button.success { background: var(--success); }
+    button.success:hover:not(:disabled) { background: #059669; box-shadow: 0 8px 15px rgba(16, 185, 129, 0.3); }
+    button.danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+    button.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.2); border-color: var(--danger); }
+
+    .progress-wrapper {
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #c084fc);
+      transition: width 0.4s ease;
+      border-radius: 10px;
+    }
+    
+    .progress-status { font-size: 0.8rem; color: var(--text-muted); text-align: right; }
+
+    .log-box {
+      background: rgba(0,0,0,0.5);
+      color: #a78bfa;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      padding: 16px;
+      border-radius: var(--radius);
+      height: 180px;
+      overflow-y: auto;
+      border: 1px solid rgba(139,92,246,0.2);
+      margin-top: 24px;
+    }
+    
+    .log-entry { margin-bottom: 6px; opacity: 0; animation: fadeIn 0.3s forwards; }
+    .log-error { color: var(--danger); }
+    .log-success { color: var(--success); }
+    
+    @keyframes fadeIn { to { opacity: 1; } }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    
+    .media-card {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: border-color 0.3s;
+    }
+    
+    .media-card:hover { border-color: var(--text-muted); }
+    .media-card h3 { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; align-self: flex-start; }
+    
+    /* 1:1 Aspect Ratio Containers */
+    .media-preview-container {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      display: none;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .media-preview-container img, .media-preview-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      color: var(--border-color);
+      font-size: 2rem;
+      margin-bottom: 16px;
+    }
+    
+    .recording-indicator {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.7);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .recording-dot {
+      width: 8px; height: 8px;
+      background: var(--danger);
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+  </style>
+</head>
+<body>
+
+  <h1>Seamless WebM Studio</h1>
+  <p class="subtitle">AI-powered native looping showcases for your products.</p>
+
+  <div class="container">
+    <!-- LEFT PANEL -->
+    <div class="glass-panel">
+      <h2>Configuration</h2>
+      
+      <div class="input-group">
+        <label for="imageUpload">Upload Product Reference (JPEG/PNG/WEBP)</label>
+        <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/webp" />
+      </div>
+
+      <div class="input-group">
+        <label for="durationSelect">Duration (Seconds)</label>
+        <select id="durationSelect">
+          <option value="4">4 Seconds</option>
+          <option value="6" selected>6 Seconds</option>
+          <option value="8">8 Seconds</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="aspectRatioSelect">Aspect Ratio</label>
+        <select id="aspectRatioSelect">
+          <option value="1:1" selected>1:1 (Square)</option>
+          <option value="16:9">16:9 (Landscape)</option>
+          <option value="9:16">9:16 (Portrait)</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="promptInput">Video Generation Prompt</label>
+        <textarea id="promptInput" rows="5">A 6-second seamless looping cinematic product showcase. Static camera, locked composition. The final frame seamlessly matches the precise lighting, pose, and state of the first frame.</textarea>
+      </div>
+
+      <!-- Step 1: Generate Proxy MP4 -->
+      <button id="btnGenerate" onclick="startGeneration()">1. Generate AI Video (MP4)</button>
+      
+      <div id="videoProgressWrapper" class="progress-wrapper">
+        <div class="progress-bar"><div id="videoProgressFill" class="progress-fill"></div></div>
+        <div id="videoProgressText" class="progress-status">Initializing...</div>
+      </div>
+
+      <!-- Step 2: Native WebM Encoding -->
+      <button id="btnConvert" onclick="convertVideoToWebM()" class="secondary" disabled>2. Record Native WebM</button>
+      
+      <div id="webmProgressWrapper" class="progress-wrapper">
+        <div class="progress-bar"><div id="webmProgressFill" class="progress-fill" style="background: linear-gradient(90deg, var(--success), #34d399);"></div></div>
+        <div id="webmProgressText" class="progress-status">Recording...</div>
+      </div>
+      
+      <button id="btnReset" onclick="resetStudio()" class="danger" style="margin-top: 10px;">Start Over</button>
+
+      <div id="logTerminal" class="log-box">
+        <div class="log-entry">System ready. Awaiting input.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="glass-panel">
+      <h2>Media Workspace (1:1 Ratio)</h2>
+      <div class="media-grid">
+        
+        <!-- Image Card -->
+        <div class="media-card">
+          <h3>1. Source Image</h3>
+          <div id="imgEmpty" class="empty-state">🖼️</div>
+          <div id="imgContainer" class="media-preview-container">
+            <img id="imgPreview" alt="Source" />
+          </div>
+          <button id="btnDownloadImage" class="secondary" style="display:none;" onclick="downloadMedia('imgPreview', 'source.jpg')">Download Image</button>
+        </div>
+
+        <!-- Video Card -->
+        <div class="media-card">
+          <h3>2. Proxy Stream (MP4)</h3>
+          <div id="vidEmpty" class="empty-state">🎬</div>
+          <div id="vidContainer" class="media-preview-container">
+            <div id="recordingBadge" class="recording-indicator"><div class="recording-dot"></div> REC</div>
+            <video id="videoPreview" loop muted playsinline crossorigin="anonymous"></video>
+          </div>
+          <button id="btnDownloadVideo" class="secondary" style="display:none;" onclick="downloadMedia('videoPreview', 'proxy_stream.mp4')">Download MP4</button>
+        </div>
+
+        <!-- WebM Card -->
+        <div class="media-card">
+          <h3>3. Final WebM Showcase</h3>
+          <div id="webmEmpty" class="empty-state">🌐</div>
+          <div id="webmContainer" class="media-preview-container">
+            <video id="webmPreview" loop autoplay muted playsinline></video>
+          </div>
+          <button id="btnDownloadWebm" class="success" style="display:none;" onclick="downloadMedia('webmPreview', 'seamless_showcase.webm')">Download WebM</button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentImageBase64 = null;
+    let currentMimeType = null;
+    let currentVideoBlobUrl = null;
+    let currentWebmBlobUrl = null;
+
+    // IndexedDB Setup for Persistent Session
+    const DB_NAME = 'WebmStudioDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'studioState';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+      });
+    }
+
+    async function dbGet(key) {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(STORE_NAME, 'readonly');
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.get(key);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+      } catch (e) {
+        console.error("IndexedDB error:", e);
+        return null;
+      }
+    }
+
+    async function dbSet(key, value) {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(STORE_NAME, 'readwrite');
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.put(value, key);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve();
+        });
+      } catch (e) {
+        console.error("IndexedDB error:", e);
+      }
+    }
+
+    async function dbDelete(key) {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(STORE_NAME, 'readwrite');
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.delete(key);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve();
+        });
+      } catch (e) {
+        console.error("IndexedDB error:", e);
+      }
+    }
+
+    async function dbClear() {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(STORE_NAME, 'readwrite');
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.clear();
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve();
+        });
+      } catch (e) {
+        console.error("IndexedDB error:", e);
+      }
+    }
+
+    async function logMsg(msg, type = 'normal') {
+      const terminal = document.getElementById('logTerminal');
+      const timestamp = new Date().toLocaleTimeString();
+      let className = 'log-entry';
+      if (type === 'error') className += ' log-error';
+      if (type === 'success') className += ' log-success';
+      terminal.innerHTML += `<div class="${className}">[${timestamp}] ${msg}</div>`;
+      terminal.scrollTop = terminal.scrollHeight;
+      
+      // Persist logs
+      await dbSet('logs', terminal.innerHTML);
+    }
+
+    // Load cached settings and session from browser storage
+    window.onload = async () => {
+      // 1. Restore configuration fields from localStorage
+      const savedDuration = localStorage.getItem('veo_duration');
+      const savedAspect = localStorage.getItem('veo_aspect');
+      const savedPrompt = localStorage.getItem('veo_prompt');
+      if (savedDuration) document.getElementById('durationSelect').value = savedDuration;
+      if (savedAspect) document.getElementById('aspectRatioSelect').value = savedAspect;
+      if (savedPrompt) document.getElementById('promptInput').value = savedPrompt;
+
+      // 2. Restore logs from IndexedDB
+      const savedLogs = await dbGet('logs');
+      if (savedLogs) {
+        document.getElementById('logTerminal').innerHTML = savedLogs;
+        const terminal = document.getElementById('logTerminal');
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      // 3. Restore Source Image
+      const sourceImage = await dbGet('sourceImage');
+      if (sourceImage) {
+        currentImageBase64 = sourceImage.base64;
+        currentMimeType = sourceImage.mimeType;
+        const imgEl = document.getElementById('imgPreview');
+        imgEl.src = currentImageBase64;
+        document.getElementById('imgEmpty').style.display = 'none';
+        document.getElementById('imgContainer').style.display = 'block';
+        document.getElementById('btnDownloadImage').style.display = 'block';
+      }
+
+      // 4. Restore Video Blob
+      const videoBlob = await dbGet('videoBlob');
+      if (videoBlob) {
+        currentVideoBlobUrl = URL.createObjectURL(videoBlob);
+        const vidEl = document.getElementById('videoPreview');
+        vidEl.src = currentVideoBlobUrl;
+        document.getElementById('vidEmpty').style.display = 'none';
+        document.getElementById('vidContainer').style.display = 'block';
+        document.getElementById('btnDownloadVideo').style.display = 'block';
+        document.getElementById('btnConvert').disabled = false;
+      }
+
+      // 5. Restore WebM Blob
+      const webmBlob = await dbGet('webmBlob');
+      if (webmBlob) {
+        currentWebmBlobUrl = URL.createObjectURL(webmBlob);
+        const webmEl = document.getElementById('webmPreview');
+        webmEl.src = currentWebmBlobUrl;
+        document.getElementById('webmEmpty').style.display = 'none';
+        document.getElementById('webmContainer').style.display = 'block';
+        document.getElementById('btnDownloadWebm').style.display = 'block';
+      }
+
+      // 6. Resume Polling if generation was interrupted
+      const state = await dbGet('generationState');
+      if (state && state.status === 'generating' && state.operationId) {
+        logMsg("Detected interrupted session. Resuming active generation polling...", 'success');
+        const btn = document.getElementById('btnGenerate');
+        const wrapper = document.getElementById('videoProgressWrapper');
+        const fill = document.getElementById('videoProgressFill');
+        const statusText = document.getElementById('videoProgressText');
+        
+        btn.disabled = true;
+        wrapper.style.display = 'block';
+        
+        pollStatus(state.operationId, fill, statusText, btn, wrapper);
+      }
+    };
+
+    function saveSettings() {
+      localStorage.setItem('veo_duration', document.getElementById('durationSelect').value);
+      localStorage.setItem('veo_aspect', document.getElementById('aspectRatioSelect').value);
+      localStorage.setItem('veo_prompt', document.getElementById('promptInput').value);
+    }
+
+    document.getElementById('imageUpload').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      currentMimeType = file.type;
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        currentImageBase64 = event.target.result; 
+        const imgEl = document.getElementById('imgPreview');
+        imgEl.src = currentImageBase64;
+        document.getElementById('imgEmpty').style.display = 'none';
+        document.getElementById('imgContainer').style.display = 'block';
+        document.getElementById('btnDownloadImage').style.display = 'block';
+        
+        // Cache in IndexedDB
+        await dbSet('sourceImage', { base64: currentImageBase64, mimeType: currentMimeType });
+        logMsg("Source image loaded and securely cached in IndexedDB.");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function downloadMedia(elementId, filename) {
+      const el = document.getElementById(elementId);
+      const a = document.createElement('a');
+      a.href = el.src;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      logMsg(`Downloaded ${filename}`, 'success');
+    }
+    
+    async function resetStudio() {
+      // Clear inputs
+      document.getElementById('imageUpload').value = "";
+      currentImageBase64 = null;
+      
+      // Clear blobs
+      if (currentVideoBlobUrl) URL.revokeObjectURL(currentVideoBlobUrl);
+      if (currentWebmBlobUrl) URL.revokeObjectURL(currentWebmBlobUrl);
+      currentVideoBlobUrl = null;
+      currentWebmBlobUrl = null;
+      
+      // Reset UI Elements
+      document.getElementById('imgContainer').style.display = 'none';
+      document.getElementById('vidContainer').style.display = 'none';
+      document.getElementById('webmContainer').style.display = 'none';
+      
+      document.getElementById('imgEmpty').style.display = 'flex';
+      document.getElementById('vidEmpty').style.display = 'flex';
+      document.getElementById('webmEmpty').style.display = 'flex';
+      
+      document.getElementById('btnDownloadImage').style.display = 'none';
+      document.getElementById('btnDownloadVideo').style.display = 'none';
+      document.getElementById('btnDownloadWebm').style.display = 'none';
+      
+      document.getElementById('btnGenerate').disabled = false;
+      document.getElementById('btnConvert').disabled = true;
+      
+      // Clear database
+      await dbClear();
+      
+      document.getElementById('logTerminal').innerHTML = '<div class="log-entry">Studio reset. Ready for new input.</div>';
+    }
+
+    async function startGeneration() {
+      saveSettings();
+      const prompt = document.getElementById('promptInput').value.trim();
+      const durationSeconds = document.getElementById('durationSelect').value;
+      const aspectRatio = document.getElementById('aspectRatioSelect').value;
+      const btn = document.getElementById('btnGenerate');
+      const wrapper = document.getElementById('videoProgressWrapper');
+      const fill = document.getElementById('videoProgressFill');
+      const statusText = document.getElementById('videoProgressText');
+
+      if (!prompt || !currentImageBase64) {
+        alert("Please upload a product image and provide a prompt.");
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        wrapper.style.display = 'block';
+        fill.style.width = '10%';
+        statusText.innerText = "Initiating Veo engine...";
+        logMsg("Transmitting payload to edge API...");
+
+        const response = await fetch('/api/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: currentImageBase64,
+            mimeType: currentMimeType,
+            prompt: prompt,
+            durationSeconds: durationSeconds,
+            aspectRatio: aspectRatio
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Failed to start generation");
+
+        logMsg(`Operation accepted: ${data.operationId}`);
+        fill.style.width = '20%';
+        
+        // Cache active polling state
+        await dbSet('generationState', { status: 'generating', operationId: data.operationId });
+        
+        pollStatus(data.operationId, fill, statusText, btn, wrapper);
+
+      } catch (error) {
+        logMsg(`API ERROR: ${error.message}`, 'error');
+        fill.style.background = 'var(--danger)';
+        statusText.innerText = "Generation failed.";
+        btn.disabled = false;
+        await dbDelete('generationState');
+      }
+    }
+
+    async function pollStatus(operationId, fill, statusText, btn, wrapper) {
+      let attempts = 0;
+      let delay = 2000;
+      const maxDelay = 15000;
+      const maxAttempts = 45; // allows for a few minutes of polling
+
+      async function check() {
+        attempts++;
+        if (attempts > maxAttempts) {
+          logMsg("ERROR: Polling timed out. Veo is taking too long.", 'error');
+          fill.style.background = 'var(--danger)';
+          btn.disabled = false;
+          await dbDelete('generationState');
+          return;
+        }
+
+        try {
+          statusText.innerText = `Polling status (Attempt ${attempts})...`;
+          const response = await fetch(`/api/poll?operationId=${encodeURIComponent(operationId)}`);
+          const data = await response.json();
+
+          if (!response.ok) throw new Error(data.error);
+
+          if (data.status === "complete") {
+            fill.style.width = '100%';
+            statusText.innerText = "Downloading video stream...";
+            logMsg("Veo generation complete! Fetching proxy stream...", 'success');
+            
+            const mp4Res = await fetch(data.videoUrl);
+            if (!mp4Res.ok) throw new Error("Failed to download video proxy stream.");
+            
+            const videoBlob = await mp4Res.blob();
+            
+            // Cache video blob in database
+            await dbSet('videoBlob', videoBlob);
+            await dbDelete('generationState'); // Clear polling state
+            
+            currentVideoBlobUrl = URL.createObjectURL(videoBlob);
+            
+            const vidEl = document.getElementById('videoPreview');
+            vidEl.src = currentVideoBlobUrl;
+            
+            document.getElementById('vidEmpty').style.display = 'none';
+            document.getElementById('vidContainer').style.display = 'block';
+            document.getElementById('btnDownloadVideo').style.display = 'block';
+            
+            document.getElementById('btnConvert').disabled = false;
+            btn.disabled = false;
+            
+            setTimeout(() => wrapper.style.display = 'none', 2000);
+            return;
+          }
+
+          fill.style.width = `${Math.min(95, 20 + (attempts * 1.5))}%`;
+          delay = Math.min(delay * 1.5, maxDelay);
+          setTimeout(check, delay);
+
+        } catch (error) {
+          logMsg(`POLL ERROR: ${error.message}`, 'error');
+          fill.style.background = 'var(--danger)';
+          btn.disabled = false;
+          await dbDelete('generationState');
+        }
+      }
+      check();
+    }
+
+    // Native MediaRecorder WebM Encoding
+    async function convertVideoToWebM() {
+      if (!currentVideoBlobUrl) return;
+
+      const btn = document.getElementById('btnConvert');
+      const wrapper = document.getElementById('webmProgressWrapper');
+      const fill = document.getElementById('webmProgressFill');
+      const statusText = document.getElementById('webmProgressText');
+      const videoEl = document.getElementById('videoPreview');
+      const badge = document.getElementById('recordingBadge');
+
+      try {
+        btn.disabled = true;
+        wrapper.style.display = 'block';
+        fill.style.width = '10%';
+        statusText.innerText = "Preparing native WebM encoder...";
+        logMsg("Setting up MediaRecorder API for native capture.");
+        
+        // Ensure video is at the start and ready
+        videoEl.currentTime = 0;
+        videoEl.loop = false; // We only want to record one cycle (6 seconds)
+        
+        // Capture the stream from the video element
+        const stream = videoEl.captureStream ? videoEl.captureStream() : videoEl.mozCaptureStream();
+        
+        // Determine optimal MIME type
+        const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs=vp9') 
+          ? 'video/webm; codecs=vp9' 
+          : 'video/webm';
+          
+        const mediaRecorder = new MediaRecorder(stream, { 
+          mimeType,
+          videoBitsPerSecond: 2500000 // High quality 2.5 Mbps
+        });
+        
+        let chunks = [];
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+        
+        mediaRecorder.onstart = () => {
+          logMsg(`Recording started: ${mimeType}`);
+          statusText.innerText = "Recording playing video...";
+          badge.style.opacity = '1';
+          
+          // Animate progress bar over 6 seconds
+          fill.style.transition = 'width 6s linear';
+          fill.style.width = '95%';
+        };
+        
+        mediaRecorder.onstop = async () => {
+          badge.style.opacity = '0';
+          fill.style.transition = 'width 0.4s ease';
+          fill.style.width = '100%';
+          statusText.innerText = "Finalizing WebM Blob...";
+          logMsg("Recording finished. Compiling WebM.", 'success');
+          
+          const webmBlob = new Blob(chunks, { type: 'video/webm' });
+          
+          // Cache WebM in IndexedDB
+          await dbSet('webmBlob', webmBlob);
+          
+          currentWebmBlobUrl = URL.createObjectURL(webmBlob);
+          
+          const webmEl = document.getElementById('webmPreview');
+          webmEl.src = currentWebmBlobUrl;
+          
+          document.getElementById('webmEmpty').style.display = 'none';
+          document.getElementById('webmContainer').style.display = 'block';
+          document.getElementById('btnDownloadWebm').style.display = 'block';
+          
+          btn.disabled = false;
+          videoEl.loop = true; // reset loop for proxy preview
+          videoEl.play(); // resume background play
+          
+          setTimeout(() => wrapper.style.display = 'none', 2000);
+        };
+        
+        // Handle end of video (6s mark) to stop recording
+        videoEl.onended = () => {
+          mediaRecorder.stop();
+          videoEl.onended = null;
+        };
+        
+        // Start playback and recording simultaneously
+        await videoEl.play();
+        mediaRecorder.start();
+
+      } catch (error) {
+        logMsg(`WEBM ERROR: ${error.message}`, 'error');
+        fill.style.background = 'var(--danger)';
+        statusText.innerText = "Conversion failed.";
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
