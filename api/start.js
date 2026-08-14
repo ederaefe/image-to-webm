@@ -12,21 +12,24 @@ export default async function handler(req, res) {
         const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
         const payload = {
-            prompt: prompt || "A 6-second seamless looping cinematic product showcase.",
-            image: {
-                inlineData: {
-                    data: cleanBase64,
-                    mimeType: mimeType
+            instances: [
+                {
+                    prompt: prompt || "A 6-second seamless looping cinematic product showcase.",
+                    image: {
+                        bytesBase64Encoded: cleanBase64,
+                        mimeType: mimeType
+                    }
                 }
-            },
-            config: {
+            ],
+            parameters: {
+                sampleCount: 1,
                 durationSeconds: parseInt(durationSeconds) || 6,
                 aspectRatio: aspectRatio || "1:1"
             }
         };
 
         const attemptGeneration = async () => {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview:generateVideos?key=${apiKey}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
