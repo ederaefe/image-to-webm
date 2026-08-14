@@ -323,6 +323,11 @@
       </div>
 
       <div class="input-group">
+        <label for="videoUpload">Or Upload Custom MP4 Video directly (Bypass AI)</label>
+        <input type="file" id="videoUpload" accept="video/mp4, video/quicktime" />
+      </div>
+
+      <div class="input-group">
         <label for="durationSelect">Duration (Seconds)</label>
         <select id="durationSelect">
           <option value="4">4 Seconds</option>
@@ -602,6 +607,29 @@
       };
       reader.readAsDataURL(file);
     });
+    document.getElementById('videoUpload').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      logMsg("Reading custom MP4 file...");
+      
+      // Cache video blob in database
+      await dbSet('videoBlob', file);
+      
+      if (currentVideoBlobUrl) URL.revokeObjectURL(currentVideoBlobUrl);
+      currentVideoBlobUrl = URL.createObjectURL(file);
+      
+      const vidEl = document.getElementById('videoPreview');
+      vidEl.src = currentVideoBlobUrl;
+      
+      document.getElementById('vidEmpty').style.display = 'none';
+      document.getElementById('vidContainer').style.display = 'block';
+      document.getElementById('btnDownloadVideo').style.display = 'block';
+      
+      document.getElementById('btnConvert').disabled = false;
+      
+      logMsg("Custom MP4 loaded and ready for native WebM conversion.", 'success');
+    });
 
     function downloadMedia(elementId, filename) {
       const el = document.getElementById(elementId);
@@ -617,6 +645,7 @@
     async function resetStudio() {
       // Clear inputs
       document.getElementById('imageUpload').value = "";
+      document.getElementById('videoUpload').value = "";
       currentImageBase64 = null;
       
       // Clear blobs
